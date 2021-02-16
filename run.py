@@ -7,6 +7,7 @@ import shutil
 import sys
 from subprocess import call
 
+
 def run_cmd(command):
     try:
         call(command, shell=True)
@@ -14,10 +15,12 @@ def run_cmd(command):
         print("Process interrupted")
         sys.exit(1)
 
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input_folder", type=str, default="./test_images/old", help="Test images")
+    parser.add_argument("--input_folder", type=str,
+                        default="./test_images/old", help="Test images")
     parser.add_argument(
         "--output_folder",
         type=str,
@@ -29,6 +32,8 @@ if __name__ == "__main__":
         "--checkpoint_name", type=str, default="Setting_9_epoch_100", help="choose which checkpoint"
     )
     parser.add_argument("--with_scratch", action="store_true")
+    parser.add_argument("--input_scratch_size", default="full_size", choices=["full_size", "scale_256"],
+                        help="A resize mode for scratch detection. Only used with --with_scratch")
     opts = parser.parse_args()
 
     gpu1 = opts.GPU
@@ -41,11 +46,12 @@ if __name__ == "__main__":
 
     main_environment = os.getcwd()
 
-    ## Stage 1: Overall Quality Improve
+    # Stage 1: Overall Quality Improve
     print("Running Stage 1: Overall restoration")
     os.chdir("./Global")
     stage_1_input_dir = opts.input_folder
-    stage_1_output_dir = os.path.join(opts.output_folder, "stage_1_restore_output")
+    stage_1_output_dir = os.path.join(
+        opts.output_folder, "stage_1_restore_output")
     if not os.path.exists(stage_1_output_dir):
         os.makedirs(stage_1_output_dir)
 
@@ -69,7 +75,7 @@ if __name__ == "__main__":
             + stage_1_input_dir
             + " --output_dir "
             + mask_dir
-            + " --input_size full_size"
+            + f" --input_size {opts.input_scratch_size}"
             + " --GPU "
             + gpu1
         )
@@ -87,7 +93,7 @@ if __name__ == "__main__":
         run_cmd(stage_1_command_1)
         run_cmd(stage_1_command_2)
 
-    ## Solve the case when there is no face in the old photo
+    # Solve the case when there is no face in the old photo
     stage_1_results = os.path.join(stage_1_output_dir, "restored_image")
     stage_4_output_dir = os.path.join(opts.output_folder, "final_output")
     if not os.path.exists(stage_4_output_dir):
@@ -99,27 +105,30 @@ if __name__ == "__main__":
     print("Finish Stage 1 ...")
     print("\n")
 
-    ## Stage 2: Face Detection
+    # Stage 2: Face Detection
 
     print("Running Stage 2: Face Detection")
     os.chdir(".././Face_Detection")
     stage_2_input_dir = os.path.join(stage_1_output_dir, "restored_image")
-    stage_2_output_dir = os.path.join(opts.output_folder, "stage_2_detection_output")
+    stage_2_output_dir = os.path.join(
+        opts.output_folder, "stage_2_detection_output")
     if not os.path.exists(stage_2_output_dir):
         os.makedirs(stage_2_output_dir)
     stage_2_command = (
-        "python detect_all_dlib.py --url " + stage_2_input_dir + " --save_url " + stage_2_output_dir
+        "python detect_all_dlib.py --url " + stage_2_input_dir +
+        " --save_url " + stage_2_output_dir
     )
     run_cmd(stage_2_command)
     print("Finish Stage 2 ...")
     print("\n")
 
-    ## Stage 3: Face Restore
+    # Stage 3: Face Restore
     print("Running Stage 3: Face Enhancement")
     os.chdir(".././Face_Enhancement")
     stage_3_input_mask = "./"
     stage_3_input_face = stage_2_output_dir
-    stage_3_output_dir = os.path.join(opts.output_folder, "stage_3_face_output")
+    stage_3_output_dir = os.path.join(
+        opts.output_folder, "stage_3_face_output")
     if not os.path.exists(stage_3_output_dir):
         os.makedirs(stage_3_output_dir)
     stage_3_command = (
@@ -139,10 +148,11 @@ if __name__ == "__main__":
     print("Finish Stage 3 ...")
     print("\n")
 
-    ## Stage 4: Warp back
+    # Stage 4: Warp back
     print("Running Stage 4: Blending")
     os.chdir(".././Face_Detection")
-    stage_4_input_image_dir = os.path.join(stage_1_output_dir, "restored_image")
+    stage_4_input_image_dir = os.path.join(
+        stage_1_output_dir, "restored_image")
     stage_4_input_face_dir = os.path.join(stage_3_output_dir, "each_img")
     stage_4_output_dir = os.path.join(opts.output_folder, "final_output")
     if not os.path.exists(stage_4_output_dir):
@@ -160,4 +170,3 @@ if __name__ == "__main__":
     print("\n")
 
     print("All the processing is done. Please check the results.")
-
